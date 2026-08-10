@@ -1,0 +1,74 @@
+{
+  "info": {
+    "name": "RotaHub",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "ordersBaseUrl", "value": "http://localhost:8081" },
+    { "key": "trackingBaseUrl", "value": "http://localhost:8082" },
+    { "key": "bffBaseUrl", "value": "http://localhost:3000" },
+    { "key": "orderId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "orders-service",
+      "item": [
+        {
+          "name": "Create order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{ordersBaseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sender\": { \"name\": \"Loja Central\", \"address\": \"Av. Paulista, 1000, Sao Paulo\" },\n  \"recipient\": { \"name\": \"Joao Silva\", \"address\": \"Rua das Flores, 45, Campinas\" }\n}"
+            }
+          }
+        },
+        {
+          "name": "Get order by id",
+          "request": {
+            "method": "GET",
+            "url": "{{ordersBaseUrl}}/orders/{{orderId}}"
+          }
+        },
+        {
+          "name": "List orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{ordersBaseUrl}}/orders?page=0&size=20",
+              "host": ["{{ordersBaseUrl}}"],
+              "path": ["orders"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "status", "value": "CREATED", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update order status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{ordersBaseUrl}}/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CANCELLED\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "tracking-service",
+      "item": []
+    },
+    {
+      "name": "bff",
+      "item": []
+    }
+  ]
+}
