@@ -1,0 +1,25 @@
+info:
+  name: Create order
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{ordersBaseUrl}}/orders"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "sender": { "name": "Loja Central", "address": "Av. Paulista, 1000, Sao Paulo" },
+        "recipient": { "name": "Joao Silva", "address": "Rua das Flores, 45, Campinas" }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

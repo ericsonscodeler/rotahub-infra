@@ -1,0 +1,32 @@
+opencollection: 1.0.0
+
+info:
+  name: RotaHub
+config:
+  proxy:
+    inherit: true
+    config:
+      protocol: http
+      hostname: ""
+      port: ""
+      auth:
+        username: ""
+        password: ""
+      bypassProxy: ""
+
+request:
+  variables:
+    - name: ordersBaseUrl
+      value: http://localhost:8081
+    - name: trackingBaseUrl
+      value: http://localhost:8082
+    - name: bffBaseUrl
+      value: http://localhost:3000
+    - name: orderId
+      value: ab88aa84-f820-41dd-9d3c-228d1f8ae336
+bundled: false
+extensions:
+  bruno:
+    ignore:
+      - node_modules
+      - .git
