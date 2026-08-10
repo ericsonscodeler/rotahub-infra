@@ -10,5 +10,26 @@ services:
     volumes:
       - orders-postgres-data:/var/lib/postgresql/data
 
+  tracking-mongo:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: rotahub
+      MONGO_INITDB_ROOT_PASSWORD: rotahub
+      MONGO_INITDB_DATABASE: rotahub_tracking
+    ports:
+      - "27017:27017"
+    volumes:
+      - tracking-mongo-data:/data/db
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: rotahub
+      RABBITMQ_DEFAULT_PASS: rotahub
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
 volumes:
   orders-postgres-data:
+  tracking-mongo-data:
