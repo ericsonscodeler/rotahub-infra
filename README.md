@@ -50,8 +50,8 @@ flowchart LR
 Três mecanismos diferentes, três traços diferentes: pontilhado cinza é composição de UI em
 runtime (Module Federation — o shell nem sabe o conteúdo dos remotes até carregar); sólido é
 REST síncrono; tracejado laranja é o único ponto de comunicação assíncrona do sistema (evento via
-RabbitMQ). Nenhum serviço lê o banco de outro — só via API ou evento. O `routing-service` já está
-integrado ao BFF; falta só a tela de rotas no Painel do Operador.
+RabbitMQ). Nenhum serviço lê o banco de outro — só via API ou evento. O `routing-service` está
+integrado de ponta a ponta, com a tela "Planejar rota" no Painel do Operador.
 
 ## Fluxo completo de um pedido
 

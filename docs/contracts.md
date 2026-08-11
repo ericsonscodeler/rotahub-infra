@@ -115,5 +115,5 @@ Notificações, React Native, API Gateway, observabilidade completa
 
 Já implementados: CI/CD (GitHub Actions em todos os 8 repos), microfrontends federados
 (`rotahub-web` e `rotahub-customer-web` como remotes via Module Federation, carregados por
-`rotahub-web-shell`) e Roteirização (`routing-service`, integrado ao BFF; UI de rotas no Painel
-do Operador ainda pendente).
+`rotahub-web-shell`) e Roteirização de ponta a ponta (`routing-service` → BFF → tela "Planejar
+rota" no Painel do Operador).
