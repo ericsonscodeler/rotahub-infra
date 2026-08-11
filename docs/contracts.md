@@ -89,7 +89,7 @@ Publicado por `tracking-service`, consumido por `orders-service` (seta `Order.st
 
 ## BFF — rotahub-bff (porta 3000)
 
-Único ponto de entrada para o frontend. Nunca fala com Postgres/Mongo/RabbitMQ diretamente — só REST síncrono com `orders-service` e `tracking-service`.
+Único ponto de entrada para o frontend. Nunca fala com Postgres/Mongo/RabbitMQ diretamente — só REST síncrono com `orders-service`, `tracking-service` e `routing-service`.
 
 | Método | Rota | Descrição |
 |---|---|---|
@@ -99,6 +99,8 @@ Publicado por `tracking-service`, consumido por `orders-service` (seta `Order.st
 | GET | `/api/orders/by-tracking-code/{trackingCode}` | Mesma combinação acima, busca pelo código de rastreio — usado pelo `rotahub-customer-web` |
 | GET | `/api/orders` | Lista paginada (sem tracking — evita N+1; timeline só no GET por id/código) |
 | POST | `/api/orders/{id}/tracking-events` | Repassa pro tracking-service — usado pelo Painel do Operador pra simular avanço da entrega (não há app do entregador ainda) |
+| POST | `/api/routes` | Repassa pro routing-service — cria e otimiza uma rota |
+| GET | `/api/routes/{id}` | Repassa pro routing-service — busca rota por id |
 
 **Nota de arquitetura:** a criação do tracking inicial é síncrona (BFF → tracking-service); só o
 fechamento (Tracking `DELIVERED` → Order `DELIVERED`) é assíncrono via evento. Isso demonstra os
@@ -113,4 +115,5 @@ Notificações, React Native, API Gateway, observabilidade completa
 
 Já implementados: CI/CD (GitHub Actions em todos os 8 repos), microfrontends federados
 (`rotahub-web` e `rotahub-customer-web` como remotes via Module Federation, carregados por
-`rotahub-web-shell`) e Roteirização (`routing-service`, ainda não integrado ao BFF/frontend).
+`rotahub-web-shell`) e Roteirização (`routing-service`, integrado ao BFF; UI de rotas no Painel
+do Operador ainda pendente).

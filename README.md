@@ -22,7 +22,7 @@ flowchart LR
     subgraph services["Serviços de domínio"]
         ORD["orders-service<br/>Spring Boot · :8081"]
         TRK["tracking-service<br/>Spring Boot · :8082"]
-        RTG["routing-service<br/>Spring Boot · :8083<br/>(ainda não integrado ao BFF)"]
+        RTG["routing-service<br/>Spring Boot · :8083"]
     end
 
     subgraph data["Persistência (um banco por serviço)"]
@@ -37,6 +37,7 @@ flowchart LR
     CUWEB -->|"REST /api/*"| BFF
     BFF -->|"REST /orders"| ORD
     BFF -->|"REST /trackings"| TRK
+    BFF -->|"REST /routes"| RTG
     ORD --> PG
     TRK --> MG
     RTG --> PG2
@@ -44,14 +45,13 @@ flowchart LR
     MQ -.->|"consume<br/>delivery.completed"| ORD
 
     style MQ fill:#ff9800,stroke:#e65100,color:#000
-    style RTG stroke-dasharray: 4 3
 ```
 
 Três mecanismos diferentes, três traços diferentes: pontilhado cinza é composição de UI em
 runtime (Module Federation — o shell nem sabe o conteúdo dos remotes até carregar); sólido é
 REST síncrono; tracejado laranja é o único ponto de comunicação assíncrona do sistema (evento via
-RabbitMQ). Nenhum serviço lê o banco de outro — só via API ou evento. O `routing-service` (borda
-tracejada) já existe e tem contrato REST próprio, mas ainda não foi conectado ao BFF/frontend.
+RabbitMQ). Nenhum serviço lê o banco de outro — só via API ou evento. O `routing-service` já está
+integrado ao BFF; falta só a tela de rotas no Painel do Operador.
 
 ## Fluxo completo de um pedido
 
