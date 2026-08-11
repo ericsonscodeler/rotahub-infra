@@ -89,8 +89,8 @@ dois estilos de comunicação sem acoplamento desnecessário.
 ## Fora do MVP (fases seguintes)
 
 Roteirização, Notificações, React Native, API Gateway, observabilidade completa
-(OpenTelemetry/Prometheus/Grafana/Jaeger). CI/CD (GitHub Actions) já está no ar nos 5 repos.
+(OpenTelemetry/Prometheus/Grafana/Jaeger).
 
-Microfrontends federados (Module Federation) estão em construção: `rotahub-web` (Painel do
-Operador) e `rotahub-customer-web` (Acompanhamento do Cliente) como remotes, carregados por
-`rotahub-web-shell` (host).
+Já implementados: CI/CD (GitHub Actions em todos os 7 repos) e microfrontends federados
+(`rotahub-web` e `rotahub-customer-web` como remotes via Module Federation, carregados por
+`rotahub-web-shell`).
