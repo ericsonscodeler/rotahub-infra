@@ -104,6 +104,7 @@ só o código impresso na etiqueta.
 Todos os 8 repositórios têm CI (GitHub Actions) rodando build + testes a cada push na `main`.
 
 Contrato completo dos endpoints e do payload do evento: [`docs/contracts.md`](docs/contracts.md).
+Padrão visual dos 3 frontends: [`docs/design-system.md`](docs/design-system.md).
 
 ## Rodando localmente
 
