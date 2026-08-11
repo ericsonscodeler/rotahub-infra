@@ -22,11 +22,13 @@ flowchart LR
     subgraph services["Serviços de domínio"]
         ORD["orders-service<br/>Spring Boot · :8081"]
         TRK["tracking-service<br/>Spring Boot · :8082"]
+        RTG["routing-service<br/>Spring Boot · :8083<br/>(ainda não integrado ao BFF)"]
     end
 
     subgraph data["Persistência (um banco por serviço)"]
-        PG[("PostgreSQL")]
+        PG[("PostgreSQL<br/>orders")]
         MG[("MongoDB")]
+        PG2[("PostgreSQL<br/>routing")]
     end
 
     MQ{{"RabbitMQ<br/>exchange rotahub.events"}}
@@ -37,16 +39,19 @@ flowchart LR
     BFF -->|"REST /trackings"| TRK
     ORD --> PG
     TRK --> MG
+    RTG --> PG2
     TRK -.->|"publish<br/>delivery.completed"| MQ
     MQ -.->|"consume<br/>delivery.completed"| ORD
 
     style MQ fill:#ff9800,stroke:#e65100,color:#000
+    style RTG stroke-dasharray: 4 3
 ```
 
 Três mecanismos diferentes, três traços diferentes: pontilhado cinza é composição de UI em
 runtime (Module Federation — o shell nem sabe o conteúdo dos remotes até carregar); sólido é
 REST síncrono; tracejado laranja é o único ponto de comunicação assíncrona do sistema (evento via
-RabbitMQ). Nenhum serviço lê o banco de outro — só via API ou evento.
+RabbitMQ). Nenhum serviço lê o banco de outro — só via API ou evento. O `routing-service` (borda
+tracejada) já existe e tem contrato REST próprio, mas ainda não foi conectado ao BFF/frontend.
 
 ## Fluxo completo de um pedido
 
@@ -89,23 +94,24 @@ só o código impresso na etiqueta.
 |---|---|---|
 | [`orders-service`](https://github.com/ericsonscodeler/rotahub-orders-service) | Java 21 · Spring Boot 4.1 · PostgreSQL | Dono do pedido |
 | [`tracking-service`](https://github.com/ericsonscodeler/rotahub-tracking-service) | Java 21 · Spring Boot 4.1 · MongoDB | Dono do rastreio |
+| [`routing-service`](https://github.com/ericsonscodeler/rotahub-routing-service) | Java 21 · Spring Boot 4.1 · PostgreSQL | Otimização de rotas (vizinho mais próximo) |
 | [`rotahub-bff`](https://github.com/ericsonscodeler/rotahub-bff) | Node · NestJS | Orquestração REST pra UI |
 | [`rotahub-web`](https://github.com/ericsonscodeler/rotahub-web) | React · Vite · Tailwind | Painel do Operador (remote federado) |
 | [`rotahub-customer-web`](https://github.com/ericsonscodeler/rotahub-customer-web) | React · Vite · Tailwind | Acompanhamento do Cliente (remote federado) |
 | [`rotahub-web-shell`](https://github.com/ericsonscodeler/rotahub-web-shell) | React · Vite · Module Federation | Host que carrega os dois remotes |
 | `rotahub-infra` | Docker Compose | Este repositório |
 
-Todos os 7 repositórios têm CI (GitHub Actions) rodando build + testes a cada push na `main`.
+Todos os 8 repositórios têm CI (GitHub Actions) rodando build + testes a cada push na `main`.
 
 Contrato completo dos endpoints e do payload do evento: [`docs/contracts.md`](docs/contracts.md).
 
 ## Rodando localmente
 
-Clone os 7 repositórios como pastas irmãs (mesmo diretório pai) e suba a infraestrutura:
+Clone os 8 repositórios como pastas irmãs (mesmo diretório pai) e suba a infraestrutura:
 
 ```bash
 cd rotahub-infra
-docker compose up -d   # Postgres :5432, MongoDB :27017, RabbitMQ :5672 (management :15672)
+docker compose up -d   # Postgres orders :5432, Postgres routing :5433, MongoDB :27017, RabbitMQ :5672 (management :15672)
 ```
 
 Em terminais separados:
@@ -113,6 +119,7 @@ Em terminais separados:
 ```bash
 cd orders-service       && ./mvnw spring-boot:run             # :8081
 cd tracking-service      && ./mvnw spring-boot:run             # :8082
+cd routing-service       && ./mvnw spring-boot:run             # :8083
 cd bff                   && npm install && npm run start:dev  # :3000
 cd rotahub-web            && npm install && npm run dev        # :5173 (remote)
 cd rotahub-customer-web   && npm install && npm run dev        # :5174 (remote)

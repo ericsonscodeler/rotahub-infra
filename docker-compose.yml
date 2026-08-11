@@ -21,6 +21,17 @@ services:
     volumes:
       - tracking-mongo-data:/data/db
 
+  routing-postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: rotahub_routing
+      POSTGRES_USER: rotahub
+      POSTGRES_PASSWORD: rotahub
+    ports:
+      - "5433:5432"
+    volumes:
+      - routing-postgres-data:/var/lib/postgresql/data
+
   rabbitmq:
     image: rabbitmq:4-management
     environment:
@@ -33,3 +44,4 @@ services:
 volumes:
   orders-postgres-data:
   tracking-mongo-data:
+  routing-postgres-data:

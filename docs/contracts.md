@@ -6,8 +6,8 @@
 > Convenção de idioma: nomes de domínio no código (entidades, rotas, campos, enums) em **inglês**;
 > esta documentação em português.
 >
-> Repositórios: `orders-service`, `tracking-service`, `rotahub-bff`, `rotahub-web`, `rotahub-web-shell`,
-> `rotahub-customer-web`, `rotahub-infra`.
+> Repositórios: `orders-service`, `tracking-service`, `routing-service`, `rotahub-bff`,
+> `rotahub-web`, `rotahub-web-shell`, `rotahub-customer-web`, `rotahub-infra`.
 
 ---
 
@@ -29,6 +29,13 @@
 - `history`: lista de eventos (status, timestamp, note, position)
 - `createdAt`
 
+### Route (dono: routing-service / Postgres)
+- `id` (UUID)
+- `status`: `PLANNED → IN_PROGRESS → COMPLETED`
+- `stops`: lista ordenada de { orderId, address, lat, lng } — a ordem já é a otimizada
+- `totalDistanceKm` (calculado, não persistido)
+- `createdAt`
+
 ---
 
 ## REST — orders-service (porta 8081)
@@ -48,6 +55,19 @@
 | POST | `/trackings` | `{ orderId }` → cria registro inicial (`AWAITING_PICKUP`) |
 | POST | `/trackings/{orderId}/events` | `{ status, position?, timestamp, note? }` → registra evento na timeline. Se `status == DELIVERED`, publica o evento assíncrono |
 | GET | `/trackings/{orderId}` | Status atual + histórico completo |
+
+## REST — routing-service (porta 8083)
+
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/routes` | `{ stops: [{ orderId, address, lat, lng }] }` → otimiza a ordem (vizinho mais próximo, distância haversine) e cria a rota → `201` |
+| GET | `/routes/{id}` | Busca por id, com `totalDistanceKm` recalculado |
+
+**Nota honesta:** a "otimização" é uma heurística de vizinho mais próximo sobre distância em
+linha reta (haversine) entre coordenadas — não é uma rota real de estrada. Não há integração com
+Google Maps/OSRM/nenhuma API de roteamento real (exigiria chave paga, fora do escopo do projeto).
+O objetivo é demonstrar um serviço de domínio com um algoritmo real, não simular uma integração
+externa que não existe.
 
 ## Evento assíncrono — `delivery.completed`
 
@@ -88,9 +108,9 @@ dois estilos de comunicação sem acoplamento desnecessário.
 
 ## Fora do MVP (fases seguintes)
 
-Roteirização, Notificações, React Native, API Gateway, observabilidade completa
+Notificações, React Native, API Gateway, observabilidade completa
 (OpenTelemetry/Prometheus/Grafana/Jaeger).
 
-Já implementados: CI/CD (GitHub Actions em todos os 7 repos) e microfrontends federados
+Já implementados: CI/CD (GitHub Actions em todos os 8 repos), microfrontends federados
 (`rotahub-web` e `rotahub-customer-web` como remotes via Module Federation, carregados por
-`rotahub-web-shell`).
+`rotahub-web-shell`) e Roteirização (`routing-service`, ainda não integrado ao BFF/frontend).
