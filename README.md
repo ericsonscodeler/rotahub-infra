@@ -72,16 +72,9 @@ A criação do pedido e do rastreio é síncrona — o operador espera a respost
 (`DELIVERED`) não é: o `tracking-service` publica o evento e segue em frente; o `orders-service`
 reage quando processa a mensagem, sem que ninguém tenha pedido isso diretamente.
 
-### Status de implementação
-
-| Trecho do fluxo | Status |
-|---|---|
-| `orders-service` — CRUD de pedidos | ✅ Implementado e testado |
-| `tracking-service` — rastreio + publicação do evento | ✅ Implementado e testado |
-| `orders-service` — consumo de `delivery.completed` | ✅ Implementado e testado |
-| `rotahub-bff` → `orders-service` | ✅ Implementado e testado |
-| `rotahub-bff` → `tracking-service` | ⏳ Pendente — BFF hoje só orquestra pedidos, o diagrama acima mostra o alvo do `docs/contracts.md` |
-| `rotahub-web` — exibir status/timeline de rastreio | ⏳ Pendente — depende do item acima |
+Os dois diagramas acima refletem o que está implementado e testado hoje — não um alvo futuro.
+No Painel do Operador, clicar num pedido expande o rastreio (status + histórico) e permite
+simular o avanço da entrega direto pela UI.
 
 ## Repositórios do RotaHub
 
