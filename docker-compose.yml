@@ -32,6 +32,17 @@ services:
     volumes:
       - routing-postgres-data:/var/lib/postgresql/data
 
+  notification-postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: rotahub_notifications
+      POSTGRES_USER: rotahub
+      POSTGRES_PASSWORD: rotahub
+    ports:
+      - "5434:5432"
+    volumes:
+      - notification-postgres-data:/var/lib/postgresql/data
+
   rabbitmq:
     image: rabbitmq:4-management
     environment:
@@ -74,3 +85,4 @@ volumes:
   orders-postgres-data:
   tracking-mongo-data:
   routing-postgres-data:
+  notification-postgres-data:

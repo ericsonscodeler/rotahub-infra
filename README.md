@@ -23,12 +23,14 @@ flowchart LR
         ORD["orders-service<br/>Spring Boot · :8081"]
         TRK["tracking-service<br/>Spring Boot · :8082"]
         RTG["routing-service<br/>Spring Boot · :8083"]
+        NOT["notification-service<br/>Spring Boot · :8084"]
     end
 
     subgraph data["Persistência (um banco por serviço)"]
         PG[("PostgreSQL<br/>orders")]
         MG[("MongoDB")]
         PG2[("PostgreSQL<br/>routing")]
+        PG3[("PostgreSQL<br/>notifications")]
     end
 
     MQ{{"RabbitMQ<br/>exchange rotahub.events"}}
@@ -38,20 +40,29 @@ flowchart LR
     BFF -->|"REST /orders"| ORD
     BFF -->|"REST /trackings"| TRK
     BFF -->|"REST /routes"| RTG
+    BFF -->|"REST /notifications"| NOT
     ORD --> PG
     TRK --> MG
     RTG --> PG2
+    NOT --> PG3
+    NOT -.->|"REST GET /orders/{id}"| ORD
     TRK -.->|"publish<br/>delivery.completed"| MQ
+    TRK -.->|"publish<br/>tracking.status-changed"| MQ
     MQ -.->|"consume<br/>delivery.completed"| ORD
+    MQ -.->|"consume<br/>tracking.status-changed"| NOT
 
     style MQ fill:#ff9800,stroke:#e65100,color:#000
 ```
 
 Três mecanismos diferentes, três traços diferentes: pontilhado cinza é composição de UI em
 runtime (Module Federation — o shell nem sabe o conteúdo dos remotes até carregar); sólido é
-REST síncrono; tracejado laranja é o único ponto de comunicação assíncrona do sistema (evento via
-RabbitMQ). Nenhum serviço lê o banco de outro — só via API ou evento. O `routing-service` está
-integrado de ponta a ponta, com a tela "Planejar rota" no Painel do Operador.
+REST síncrono; tracejado laranja é comunicação assíncrona via evento (RabbitMQ) — repare que
+`tracking.status-changed` tem **dois consumidores independentes** (`orders-service` só reage a
+`delivery.completed`; `notification-service` reage a toda mudança de status), um fan-out real
+sem acoplamento entre eles. Nenhum serviço lê o banco de outro — só via API ou evento; mesmo
+`notification-service`, que precisa do e-mail do destinatário, busca isso via REST no
+`orders-service` em vez de duplicar o dado. O `routing-service` está integrado de ponta a ponta,
+com a tela "Planejar rota" no Painel do Operador.
 
 ## Fluxo completo de um pedido
 
@@ -62,6 +73,7 @@ sequenceDiagram
     participant ORD as orders-service
     participant TRK as tracking-service
     participant MQ as RabbitMQ
+    participant NOT as notification-service
 
     Op->>BFF: POST /api/orders
     BFF->>ORD: POST /orders
@@ -78,11 +90,21 @@ sequenceDiagram
     TRK->>MQ: publish delivery.completed
     MQ->>ORD: consume delivery.completed
     ORD->>ORD: Order.status = DELIVERED
+
+    TRK->>MQ: publish tracking.status-changed
+    MQ->>NOT: consume tracking.status-changed
+    NOT->>ORD: GET /orders/{id} (busca destinatário)
+    ORD-->>NOT: nome + e-mail
+    NOT->>NOT: loga + persiste notificação
 ```
 
 A criação do pedido e do rastreio é síncrona — o operador espera a resposta. O fechamento
 (`DELIVERED`) não é: o `tracking-service` publica o evento e segue em frente; o `orders-service`
-reage quando processa a mensagem, sem que ninguém tenha pedido isso diretamente.
+reage quando processa a mensagem, sem que ninguém tenha pedido isso diretamente. O mesmo avanço
+de status também dispara `tracking.status-changed` — um evento genérico, publicado em toda
+mudança —, que o `notification-service` consome de forma totalmente independente do
+`orders-service`: os dois reagem ao mesmo tipo de evento (fan-out), cada um cuidando da sua
+própria responsabilidade sem se conhecerem.
 
 O Acompanhamento do Cliente segue o mesmo padrão de leitura, trocando `GET /api/orders/{id}` por
 `GET /api/orders/by-tracking-code/{trackingCode}` — o cliente final não conhece o UUID interno,
@@ -95,13 +117,14 @@ só o código impresso na etiqueta.
 | [`orders-service`](https://github.com/ericsonscodeler/rotahub-orders-service) | Java 21 · Spring Boot 4.1 · PostgreSQL | Dono do pedido |
 | [`tracking-service`](https://github.com/ericsonscodeler/rotahub-tracking-service) | Java 21 · Spring Boot 4.1 · MongoDB | Dono do rastreio |
 | [`routing-service`](https://github.com/ericsonscodeler/rotahub-routing-service) | Java 21 · Spring Boot 4.1 · PostgreSQL | Otimização de rotas (vizinho mais próximo) |
+| [`notification-service`](https://github.com/ericsonscodeler/rotahub-notification-service) | Java 21 · Spring Boot 4.1 · PostgreSQL | Notifica o destinatário a cada mudança de status |
 | [`rotahub-bff`](https://github.com/ericsonscodeler/rotahub-bff) | Node · NestJS | Orquestração REST pra UI |
 | [`rotahub-web`](https://github.com/ericsonscodeler/rotahub-web) | React · Vite · Tailwind | Painel do Operador (remote federado) |
 | [`rotahub-customer-web`](https://github.com/ericsonscodeler/rotahub-customer-web) | React · Vite · Tailwind | Acompanhamento do Cliente (remote federado) |
 | [`rotahub-web-shell`](https://github.com/ericsonscodeler/rotahub-web-shell) | React · Vite · Module Federation | Host que carrega os dois remotes |
 | `rotahub-infra` | Docker Compose | Este repositório |
 
-Todos os 8 repositórios têm CI (GitHub Actions) rodando build + testes a cada push na `main`.
+Todos os 9 repositórios têm CI (GitHub Actions) rodando build + testes a cada push na `main`.
 
 Contrato completo dos endpoints e do payload do evento: [`docs/contracts.md`](docs/contracts.md).
 Padrão visual dos 3 frontends: [`docs/design-system.md`](docs/design-system.md).
@@ -109,11 +132,12 @@ Tracing distribuído e métricas: [`docs/observability.md`](docs/observability.m
 
 ## Rodando localmente
 
-Clone os 8 repositórios como pastas irmãs (mesmo diretório pai) e suba a infraestrutura:
+Clone os 9 repositórios como pastas irmãs (mesmo diretório pai) e suba a infraestrutura:
 
 ```bash
 cd rotahub-infra
-docker compose up -d   # Postgres orders :5432, Postgres routing :5433, MongoDB :27017, RabbitMQ :5672 (management :15672)
+docker compose up -d   # Postgres orders :5432, Postgres routing :5433, Postgres notifications :5434,
+                        # MongoDB :27017, RabbitMQ :5672 (management :15672)
                         # Jaeger :16686, Prometheus :9090, Grafana :3001
 ```
 
@@ -123,6 +147,7 @@ Em terminais separados:
 cd orders-service       && ./mvnw spring-boot:run             # :8081
 cd tracking-service      && ./mvnw spring-boot:run             # :8082
 cd routing-service       && ./mvnw spring-boot:run             # :8083
+cd notification-service  && ./mvnw spring-boot:run             # :8084
 cd bff                   && npm install && npm run start:dev  # :3000
 cd rotahub-web            && npm install && npm run dev        # :5173 (remote)
 cd rotahub-customer-web   && npm install && npm run dev        # :5174 (remote)

@@ -6,8 +6,8 @@
 > Convenção de idioma: nomes de domínio no código (entidades, rotas, campos, enums) em **inglês**;
 > esta documentação em português.
 >
-> Repositórios: `orders-service`, `tracking-service`, `routing-service`, `rotahub-bff`,
-> `rotahub-web`, `rotahub-web-shell`, `rotahub-customer-web`, `rotahub-infra`.
+> Repositórios: `orders-service`, `tracking-service`, `routing-service`, `notification-service`,
+> `rotahub-bff`, `rotahub-web`, `rotahub-web-shell`, `rotahub-customer-web`, `rotahub-infra`.
 
 ---
 
@@ -16,8 +16,8 @@
 ### Order (dono: orders-service / Postgres)
 - `id` (UUID)
 - `trackingCode` (string)
-- `sender` { name, address }
-- `recipient` { name, address }
+- `sender` { name, address, email }
+- `recipient` { name, address, email }
 - `status`: `CREATED → IN_TRANSIT → DELIVERED` (ou `CANCELLED`)
 - `createdAt`, `updatedAt`
 
@@ -34,6 +34,15 @@
 - `status`: `PLANNED → IN_PROGRESS → COMPLETED`
 - `stops`: lista ordenada de { orderId, address, lat, lng } — a ordem já é a otimizada
 - `totalDistanceKm` (calculado, não persistido)
+- `createdAt`
+
+### Notification (dono: notification-service / Postgres)
+- `id` (UUID)
+- `orderId` (referência lógica ao Order — nunca FK direta)
+- `recipientEmail`, `recipientName`
+- `trackingStatus` (string crua do evento recebido, ex: `PICKED_UP` — não é o enum
+  `TrackingStatus` do tracking-service; ver nota de acoplamento abaixo)
+- `subject`, `body`
 - `createdAt`
 
 ---
@@ -69,11 +78,24 @@ Google Maps/OSRM/nenhuma API de roteamento real (exigiria chave paga, fora do es
 O objetivo é demonstrar um serviço de domínio com um algoritmo real, não simular uma integração
 externa que não existe.
 
-## Evento assíncrono — `delivery.completed`
+## REST — notification-service (porta 8084)
 
-RabbitMQ, exchange `rotahub.events` (topic), routing key `delivery.completed`.
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/notifications/{orderId}` | Lista notificações do pedido, mais recente primeiro |
 
-Publicado por `tracking-service`, consumido por `orders-service` (seta `Order.status = DELIVERED`).
+**Nota honesta:** não há envio de e-mail real (SMTP, SendGrid, etc.) — "notificar" aqui é montar
+assunto/corpo a partir de um template por status, logar em `INFO` e persistir um registro
+consultável. Ver `notification-service/README.md`.
+
+## Eventos assíncronos
+
+RabbitMQ, exchange `rotahub.events` (topic).
+
+### `delivery.completed`
+
+Routing key `delivery.completed`. Publicado por `tracking-service` quando o status vira
+`DELIVERED`, consumido por `orders-service` (seta `Order.status = DELIVERED`).
 
 ```json
 {
@@ -84,6 +106,26 @@ Publicado por `tracking-service`, consumido por `orders-service` (seta `Order.st
   "trackingId": "uuid",
   "deliveredAt": "2026-08-10T14:30:00Z",
   "finalPosition": { "lat": -23.55, "lng": -46.63 }
+}
+```
+
+### `tracking.status-changed`
+
+Routing key `tracking.status-changed`. Publicado por `tracking-service` em **toda** mudança de
+status do rastreio (não só `DELIVERED`). Consumido por `notification-service` — segundo
+consumidor independente do `tracking-service`, demonstrando fan-out (um evento publicado, dois
+serviços reagindo sem se conhecerem).
+
+```json
+{
+  "eventId": "uuid",
+  "eventType": "tracking.status-changed",
+  "occurredAt": "2026-08-10T14:30:00Z",
+  "orderId": "uuid",
+  "trackingId": "uuid",
+  "status": "PICKED_UP",
+  "position": { "lat": -23.55, "lng": -46.63 },
+  "note": "string ou null"
 }
 ```
 
@@ -101,6 +143,7 @@ Publicado por `tracking-service`, consumido por `orders-service` (seta `Order.st
 | POST | `/api/orders/{id}/tracking-events` | Repassa pro tracking-service — usado pelo Painel do Operador pra simular avanço da entrega (não há app do entregador ainda) |
 | POST | `/api/routes` | Repassa pro routing-service — cria e otimiza uma rota |
 | GET | `/api/routes/{id}` | Repassa pro routing-service — busca rota por id |
+| GET | `/api/orders/{id}/notifications` | Repassa pro notification-service — histórico de notificações do pedido |
 
 **Nota de arquitetura:** a criação do tracking inicial é síncrona (BFF → tracking-service); só o
 fechamento (Tracking `DELIVERED` → Order `DELIVERED`) é assíncrono via evento. Isso demonstra os
@@ -110,10 +153,11 @@ dois estilos de comunicação sem acoplamento desnecessário.
 
 ## Fora do MVP (fases seguintes)
 
-Notificações, React Native, API Gateway.
+React Native, API Gateway.
 
-Já implementados: CI/CD (GitHub Actions em todos os 8 repos), microfrontends federados
+Já implementados: CI/CD (GitHub Actions em todos os 9 repos), microfrontends federados
 (`rotahub-web` e `rotahub-customer-web` como remotes via Module Federation, carregados por
 `rotahub-web-shell`), Roteirização de ponta a ponta (`routing-service` → BFF → tela "Planejar
-rota" no Painel do Operador) e observabilidade completa (tracing distribuído via OpenTelemetry +
-Jaeger, métricas via Prometheus + Grafana — ver [`docs/observability.md`](observability.md)).
+rota" no Painel do Operador), observabilidade completa (tracing distribuído via OpenTelemetry +
+Jaeger, métricas via Prometheus + Grafana — ver [`docs/observability.md`](observability.md)) e
+Notificações (`notification-service`, consumidor fan-out de `tracking.status-changed`).
