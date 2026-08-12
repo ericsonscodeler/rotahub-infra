@@ -105,6 +105,7 @@ Todos os 8 repositórios têm CI (GitHub Actions) rodando build + testes a cada 
 
 Contrato completo dos endpoints e do payload do evento: [`docs/contracts.md`](docs/contracts.md).
 Padrão visual dos 3 frontends: [`docs/design-system.md`](docs/design-system.md).
+Tracing distribuído e métricas: [`docs/observability.md`](docs/observability.md).
 
 ## Rodando localmente
 
@@ -113,6 +114,7 @@ Clone os 8 repositórios como pastas irmãs (mesmo diretório pai) e suba a infr
 ```bash
 cd rotahub-infra
 docker compose up -d   # Postgres orders :5432, Postgres routing :5433, MongoDB :27017, RabbitMQ :5672 (management :15672)
+                        # Jaeger :16686, Prometheus :9090, Grafana :3001
 ```
 
 Em terminais separados:

@@ -110,10 +110,10 @@ dois estilos de comunicação sem acoplamento desnecessário.
 
 ## Fora do MVP (fases seguintes)
 
-Notificações, React Native, API Gateway, observabilidade completa
-(OpenTelemetry/Prometheus/Grafana/Jaeger).
+Notificações, React Native, API Gateway.
 
 Já implementados: CI/CD (GitHub Actions em todos os 8 repos), microfrontends federados
 (`rotahub-web` e `rotahub-customer-web` como remotes via Module Federation, carregados por
-`rotahub-web-shell`) e Roteirização de ponta a ponta (`routing-service` → BFF → tela "Planejar
-rota" no Painel do Operador).
+`rotahub-web-shell`), Roteirização de ponta a ponta (`routing-service` → BFF → tela "Planejar
+rota" no Painel do Operador) e observabilidade completa (tracing distribuído via OpenTelemetry +
+Jaeger, métricas via Prometheus + Grafana — ver [`docs/observability.md`](observability.md)).
